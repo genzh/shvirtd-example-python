@@ -1,0 +1,48 @@
+# ===========================================
+# STAGE 1: Builder (сборка зависимостей)
+# ===========================================
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+# Установка build-зависимостей
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# ✅ ИСПРАВЛЕНО: requirements.txt в КОРНЕ!
+COPY requirements.txt .
+
+# Установка зависимостей в wheels
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+
+# ===========================================
+# STAGE 2: Runtime (финальный образ)
+# ===========================================
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Создаём пользователя безопасности
+RUN useradd --create-home appuser \
+    && chown -R appuser:appuser /app
+
+# Копируем wheels из builder
+COPY --from=builder /wheels /wheels
+
+# ✅ ОБЯЗАТЕЛЬНО: COPY . . (как в задании)
+COPY . .
+
+# Установка зависимостей
+RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \
+    && rm -rf /wheels \
+    && chown -R appuser:appuser /app
+
+# Переключаемся на appuser
+USER appuser
+
+EXPOSE 5000
+
+# Запуск uvicorn (как в задании)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]

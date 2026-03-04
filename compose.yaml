@@ -1,0 +1,31 @@
+version: '3.8'
+
+include:
+  - proxy.yaml
+
+services:
+  web:
+    # ИСПОЛЬЗУЕМ образ из Yandex Registry (задание 2)
+    image: cr.yandex/crpjduavfco6d977g4gk/shvirtd-python:latest
+    # image: .  # АЛЬТЕРНАТИВА: сборка из Dockerfile.python
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.5
+    environment:
+      - DB_HOST=web_db  # сетевой hostname сервиса db
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      
+  web_db:
+    image: mysql:8
+    restart: always
+    networks:
+      backend:
+        ipv4_address: 172.20.0.10
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
